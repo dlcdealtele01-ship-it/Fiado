@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta y Fiados V6 - Cámara</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería para leer códigos de barras con la cámara -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+
+    <div class="max-w-[1400px] mx-auto p-3 md:p-6">
+        <!-- Header -->
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-blue-900 tracking-tight">🛒 Caja y Fiados</h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium">Control de cuentas por cobrar</p>
+            </div>
+            <div class="mt-4 md:mt-0 text-right bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                <span class="text-xs text-blue-600 font-bold uppercase tracking-wider block">Total por Cobrar (Global)</span>
+                <span class="text-2xl font-black text-blue-800" id="granTotalCobrar">$0.00</span>
+            </div>
+        </header>
+
+        <div class="flex flex-col xl:flex-row gap-6">
+            
+            <!-- PANEL IZQUIERDO: NUEVO REGISTRO -->
+            <div class="w-full xl:w-1/3 flex-shrink-0">
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 xl:sticky xl:top-6">
+                    <h2 class="text-lg font-bold mb-5 text-slate-800 flex items-center gap-2">
+                        <span>📝</span> Nuevo Registro
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <!-- Cliente -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre del Cliente *</label>
+                            <input type="text" id="clienteInput" class="w-full rounded-xl border-slate-200 border p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white" placeholder="Ej: María Pérez">
+                        </div>
+
+                        <!-- Lector y Producto -->
+                        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 relative overflow-hidden">
+                            <h3 class="text-sm font-bold text-blue-900 mb-3">Agregar Artículo</h3>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Código de Barra</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="prodCodigo" class="flex-1 rounded-lg border-2 border-blue-200 p-2.5 text-sm bg-yellow-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner" placeholder="Escribe o usa la cámara...">
+                                        <button type="button" onclick="abrirCamara()" class="bg-blue-600 text-white px-4 rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center" title="Escanear con la cámara">
+                                            📷
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Producto *</label>
+                                    <input type="text" id="prodNombre" class="w-full rounded-lg border-slate-200 border p-2.5 text-sm bg-white" placeholder="Ej: Arroz 1kg">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Cantidad</label>
+                                        <input type="number" id="prodCant" value="1" min="1" class="w-full rounded-lg border-slate-200 border p-2.5 text-sm bg-white font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Precio Unit. ($)</label>
+                                        <input type="number" id="prodPrecio" step="0.01" class="w-full rounded-lg border-slate-200 border p-2.5 text-sm bg-white font-bold">
+                                    </div>
+                                </div>
+                                
+                                <button onclick="agregarAlCarrito()" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-md flex justify-center items-center gap-2">
+                                    <span>➕</span> Añadir a la cuenta
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Carrito -->
+                        <div>
+                            <div class="flex justify-between items-end mb-2">
+                                <h3 class="text-sm font-bold text-slate-700">Artículos Llevados</h3>
+                                <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full" id="contadorItems">0 ítems</span>
+                            </div>
+                            
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl max-h-[220px] overflow-y-auto no-scrollbar">
+                                <table class="w-full text-sm text-left">
+                                    <tbody id="listaCarrito" class="divide-y divide-slate-200">
+                                        <tr><td colspan="4" class="text-center py-6 text-slate-400 text-xs">El carrito está vacío</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="bg-slate-800 text-white p-4 rounded-xl mt-3 flex justify-between items-center shadow-md">
+                                <span class="font-medium text-slate-300">Total a Fiar:</span>
+                                <span class="text-2xl font-black text-green-400">$<span id="totalVenta">0.00</span></span>
+                            </div>
+                        </div>
+
+                        <button onclick="guardarFiado()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-lg text-lg flex justify-center items-center gap-2">
+                            <span>💾</span> Guardar Nuevo Fiado
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL DERECHO: HISTORIAL -->
+            <div class="w-full xl:w-2/3">
+                <div class="mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <h2 class="text-xl font-bold text-slate-800">Historial de Cuentas</h2>
+                    
+                    <div class="flex gap-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm w-fit">
+                        <button onclick="filtrar('Todos')" class="px-3 py-1.5 text-xs font-bold rounded-md bg-slate-800 text-white transition filter-btn" id="btnFilterTodos">Todos</button>
+                        <button onclick="filtrar('Pendiente')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-600 hover:bg-slate-100 transition filter-btn" id="btnFilterPendientes">Pendientes</button>
+                        <button onclick="filtrar('Cancelado')" class="px-3 py-1.5 text-xs font-bold rounded-md text-slate-600 hover:bg-slate-100 transition filter-btn" id="btnFilterPagados">Pagados</button>
+                    </div>
+                </div>
+
+                <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <!-- Las tarjetas se generan por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LA CÁMARA (Lector de Códigos) -->
+    <div id="modalCamara" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
+        <div class="bg-white p-4 rounded-2xl w-full max-w-sm shadow-2xl relative">
+            <button onclick="cerrarCamara()" class="absolute -top-4 -right-4 bg-red-500 text-white rounded-full w-10 h-10 font-bold border-4 border-slate-100 flex items-center justify-center hover:bg-red-600 transition shadow-lg text-lg z-10">&times;</button>
+            <h3 class="font-bold text-center mb-3 text-slate-800">Escaneando Producto...</h3>
+            <!-- Contenedor donde se dibuja el video de la cámara -->
+            <div id="reader" width="100%" class="rounded-lg overflow-hidden border-2 border-slate-200 bg-black"></div>
+            <p class="text-xs text-center text-slate-500 mt-3">Apunta la cámara al código de barras o QR</p>
+        </div>
+    </div>
+
+    <!-- MODAL DE PAGO Y MODAL IMAGEN (Iguales que la versión anterior) -->
+    <div id="modalPago" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center hidden z-40 p-4 pb-0 md:pb-4 transition-opacity">
+        <div class="bg-white p-6 rounded-t-3xl md:rounded-2xl w-full max-w-md shadow-2xl animate-slide-up">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 md:hidden"></div>
+            <h3 class="text-2xl font-black mb-1 text-slate-800">Registrar Pago</h3>
+            <p class="text-sm text-slate-500 mb-6 pb-4 border-b">Cancelando cuenta de <strong id="modalClienteNombre" class="text-slate-700"></strong> por <strong id="modalMontoDeuda" class="text-green-600 text-lg"></strong></p>
+            <form id="formPago" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Método de Pago</label>
+                    <select id="pagoMetodo" class="w-full rounded-xl border-slate-200 border p-3 bg-slate-50 focus:ring-2 focus:ring-green-500" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Yappy">🟣 Yappy</option>
+                        <option value="Transferencia">🏦 Transferencia</option>
+                        <option value="Tarjeta">💳 Tarjeta</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Nº de Referencia</label>
+                    <input type="text" id="pagoRef" class="w-full rounded-xl border-slate-200 border p-3 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha</label>
+                    <input type="date" id="pagoFecha" class="w-full rounded-xl border-slate-200 border p-3 bg-slate-50" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Comprobante (Opcional)</label>
+                    <input type="file" id="pagoFoto" accept="image/*" class="w-full text-sm file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 border border-slate-200 rounded-xl p-1 bg-slate-50">
+                </div>
+                <div class="flex gap-3 pt-6">
+                    <button type="button" onclick="cerrarModalPago()" class="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="submit" class="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition shadow-md">Confirmar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="imageModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-2 rounded-2xl max-w-xl w-full relative">
+            <button onclick="cerrarImagen()" class="absolute -top-4 -right-4 bg-slate-800 text-white rounded-full w-10 h-10 font-bold border-4 border-slate-100 flex items-center justify-center hover:bg-red-500 transition shadow-lg text-lg">&times;</button>
+            <img id="modalImageRender" src="" class="w-full h-auto rounded-xl">
+        </div>
+    </div>
+
+    <style>
+        @keyframes slide-up { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    </style>
+
+    <script>
+        // --- BASES DE DATOS ---
+        let registros = JSON.parse(localStorage.getItem('fiados_v4')) || JSON.parse(localStorage.getItem('fiados_v3')) || [];
+        localStorage.setItem('fiados_v4', JSON.stringify(registros));
+        let catalogoProductos = JSON.parse(localStorage.getItem('catalogo_v3')) || []; 
+        let carrito = [];
+        let deudaActivaId = null;
+        let filtroActual = 'Todos';
+
+        document.getElementById('pagoFecha').valueAsDate = new Date();
+
+        // --- LÓGICA DE ESCÁNER DE CÁMARA (NUEVO) ---
+        let html5QrcodeScanner = null;
+
+        function abrirCamara() {
+            const modal = document.getElementById('modalCamara');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            // Configuración de la cámara: usar la cámara trasera y acotar la zona de lectura
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 150 }
+                },
+                (decodedText, decodedResult) => {
+                    // ¡Éxito! Leyó el código
+                    document.getElementById('prodCodigo').value = decodedText;
+                    procesarBusquedaCodigo(decodedText, true); // Busca en catálogo y salta a cantidad
+                    cerrarCamara();
+                },
+                (errorMessage) => {
+                    // Errores de lectura ignorables (pasa muy rápido mientras enfoca)
+                }
+            ).catch((err) => {
+                alert("Error al abrir la cámara. Asegúrate de dar permisos en tu navegador.");
+                cerrarCamara();
+            });
+        }
+
+        function cerrarCamara() {
+            const modal = document.getElementById('modalCamara');
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }).catch(err => {
+                    console.error("Error deteniendo el escáner.", err);
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                });
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+
+        // --- FUNCIONES DE BÚSQUEDA INTELIGENTE ---
+        function procesarBusquedaCodigo(codigoEscaneado, saltarSiguiente) {
+            if(codigoEscaneado) {
+                const productoConocido = catalogoProductos.find(p => p.codigo === codigoEscaneado);
+                if(productoConocido) {
+                    document.getElementById('prodNombre').value = productoConocido.nombre;
+                    document.getElementById('prodPrecio').value = productoConocido.precio;
+                    
+                    if (saltarSiguiente) {
+                        document.getElementById('prodCant').focus();
+                        document.getElementById('prodCant').select();
+                    }
+                }
+            }
+        }
+
+        document.getElementById('prodCodigo').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                procesarBusquedaCodigo(this.value.trim(), true);
+            }
+        });
+
+        document.getElementById('prodCodigo').addEventListener('input', function(e) {
+            procesarBusquedaCodigo(this.value.trim(), false);
+        });
+
+        // --- LÓGICA DEL CARRITO ---
+        function agregarAlCarrito() {
+            const codigo = document.getElementById('prodCodigo').value.trim();
+            const nombre = document.getElementById('prodNombre').value.trim();
+            const cant = parseFloat(document.getElementById('prodCant').value);
+            const precio = parseFloat(document.getElementById('prodPrecio').value);
+
+            if (!nombre || isNaN(cant) || isNaN(precio)) {
+                alert("Ingresa Nombre, Cantidad y Precio del producto.");
+                return;
+            }
+
+            if (codigo) {
+                const indexProducto = catalogoProductos.findIndex(p => p.codigo === codigo);
+                if (indexProducto >= 0) {
+                    catalogoProductos[indexProducto].nombre = nombre;
+                    catalogoProductos[indexProducto].precio = precio;
+                } else {
+                    catalogoProductos.push({ codigo: codigo, nombre: nombre, precio: precio });
+                }
+                localStorage.setItem('catalogo_v3', JSON.stringify(catalogoProductos));
+            }
+
+            const subtotal = cant * precio;
+            carrito.push({ codigo, nombre, cant, precio, subtotal });
+            
+            document.getElementById('prodCodigo').value = '';
+            document.getElementById('prodNombre').value = '';
+            document.getElementById('prodCant').value = '1';
+            document.getElementById('prodPrecio').value = '';
+            document.getElementById('prodCodigo').focus(); 
+
+            renderizarCarrito();
+        }
+
+        function eliminarDelCarrito(index) {
+            carrito.splice(index, 1);
+            renderizarCarrito();
+        }
+
+        function renderizarCarrito() {
+            const tbody = document.getElementById('listaCarrito');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            if(carrito.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-xs">El carrito está vacío</td></tr>`;
+            } else {
+                carrito.forEach((item, index) => {
+                    total += item.subtotal;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-100 transition-colors group">
+                            <td class="p-3 text-center font-bold text-slate-700 w-12">${item.cant}</td>
+                            <td class="p-3 leading-tight">
+                                <div class="font-bold text-sm text-slate-800 line-clamp-1" title="${item.nombre}">${item.nombre}</div>
+                                <div class="text-[10px] text-slate-400 font-mono mt-0.5">${item.codigo || 'Sin código'} • $${item.precio.toFixed(2)} c/u</div>
+                            </td>
+                            <td class="p-3 font-bold text-slate-700 text-right w-20">$${item.subtotal.toFixed(2)}</td>
+                            <td class="p-3 text-right w-10">
+                                <button onclick="eliminarDelCarrito(${index})" class="text-slate-300 hover:text-red-500 font-bold text-lg w-6 h-6 rounded-full hover:bg-red-50 flex items-center justify-center transition-all">&times;</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('totalVenta').textContent = total.toFixed(2);
+            document.getElementById('contadorItems').textContent = `${carrito.length} ítem${carrito.length !== 1 ? 's' : ''}`;
+        }
+
+        // --- LÓGICA DE GUARDAR FIADO ---
+        function guardarFiado() {
+            const cliente = document.getElementById('clienteInput').value.trim();
+            if (!cliente) { alert("¡Falta el nombre del cliente!"); document.getElementById('clienteInput').focus(); return; }
+            if (carrito.length === 0) { alert("Añade al menos un producto al carrito."); return; }
+
+            const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+
+            const nuevoFiado = {
+                id: Date.now(),
+                fechaCreacion: new Date().toLocaleDateString(),
+                cliente: cliente,
+                productos: [...carrito],
+                montoTotal: total.toFixed(2),
+                estado: 'Pendiente',
+                pagoMetodo: '', pagoReferencia: '', pagoFecha: '', pagoFoto: null
+            };
+
+            registros.unshift(nuevoFiado);
+            localStorage.setItem('fiados_v4', JSON.stringify(registros));
+            
+            document.getElementById('clienteInput').value = '';
+            carrito = [];
+            renderizarCarrito();
+            renderizarTarjetas();
+            document.getElementById('clienteInput').focus();
+        }
+
+        // --- LÓGICA DE PAGO Y MODALES ---
+        function abrirModalPago(id) {
+            const registro = registros.find(r => r.id === id);
+            if(!registro) return;
+
+            deudaActivaId = id;
+            document.getElementById('modalClienteNombre').textContent = registro.cliente;
+            document.getElementById('modalMontoDeuda').textContent = "$" + registro.montoTotal;
+            document.getElementById('modalPago').classList.remove('hidden');
+        }
+
+        function cerrarModalPago() {
+            document.getElementById('modalPago').classList.add('hidden');
+            document.getElementById('formPago').reset();
+            document.getElementById('pagoFecha').valueAsDate = new Date();
+            deudaActivaId = null;
+        }
+
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) return resolve(null);
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        document.getElementById('formPago').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if(!deudaActivaId) return;
+
+            const fileInput = document.getElementById('pagoFoto');
+            const fotoBase64 = await getBase64(fileInput.files[0]);
+
+            registros = registros.map(r => {
+                if(r.id === deudaActivaId) {
+                    return {
+                        ...r,
+                        estado: 'Cancelado',
+                        pagoMetodo: document.getElementById('pagoMetodo').value,
+                        pagoReferencia: document.getElementById('pagoRef').value || 'N/A',
+                        pagoFecha: document.getElementById('pagoFecha').value,
+                        pagoFoto: fotoBase64
+                    };
+                }
+                return r;
+            });
+
+            localStorage.setItem('fiados_v4', JSON.stringify(registros));
+            cerrarModalPago();
+            renderizarTarjetas();
+        });
+
+        function borrarRegistro(id) {
+            if(confirm('¿Eliminar registro permanentemente?')) {
+                registros = registros.filter(r => r.id !== id);
+                localStorage.setItem('fiados_v4', JSON.stringify(registros));
+                renderizarTarjetas();
+            }
+        }
+
+        function verImagen(base64Str) {
+            document.getElementById('modalImageRender').src = base64Str;
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function cerrarImagen() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        function toggleDetalles(id) {
+            const divDetalles = document.getElementById(`detalles-${id}`);
+            const icono = document.getElementById(`icono-detalles-${id}`);
+            if (divDetalles.classList.contains('hidden')) {
+                divDetalles.classList.remove('hidden');
+                icono.textContent = '▲';
+            } else {
+                divDetalles.classList.add('hidden');
+                icono.textContent = '▼';
+            }
+        }
+
+        // --- FILTROS Y RENDERIZADO DE TARJETAS ---
+        function filtrar(estado) {
+            filtroActual = estado;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+            });
+            
+            const btnActivo = estado === 'Todos' ? 'btnFilterTodos' : (estado === 'Pendiente' ? 'btnFilterPendientes' : 'btnFilterPagados');
+            document.getElementById(btnActivo).classList.remove('text-slate-600', 'hover:bg-slate-100');
+            document.getElementById(btnActivo).classList.add('bg-slate-800', 'text-white');
+
+            renderizarTarjetas();
+        }
+
+        function renderizarTarjetas() {
+            const contenedor = document.getElementById('contenedorTarjetas');
+            contenedor.innerHTML = '';
+            
+            let granTotalPendiente = 0;
+
+            const registrosFiltrados = registros.filter(r => {
+                if (r.estado === 'Pendiente') granTotalPendiente += parseFloat(r.montoTotal);
+                if (filtroActual === 'Todos') return true;
+                return r.estado === filtroActual;
+            });
+
+            document.getElementById('granTotalCobrar').textContent = `$${granTotalPendiente.toFixed(2)}`;
+
+            if (registrosFiltrados.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="col-span-full bg-white p-10 rounded-2xl text-center border border-slate-200 border-dashed">
+                        <span class="text-4xl block mb-3">📭</span>
+                        <h3 class="text-slate-500 font-bold">No hay registros para mostrar</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            registrosFiltrados.forEach(r => {
+                const isPendiente = r.estado === 'Pendiente';
+                
+                const desgloseHTML = r.productos.map(p => `
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+                        <div class="flex-1 pr-2 truncate">
+                            <span class="font-bold text-slate-700">${p.cant}x</span>
+                            <span class="text-slate-600 text-[13px] ml-1">${p.nombre}</span>
+                            <div class="text-[10px] text-slate-400 mt-0.5">$${parseFloat(p.precio).toFixed(2)} c/u ${p.codigo ? '• Cód: '+p.codigo : ''}</div>
+                        </div>
+                        <div class="font-bold text-slate-700 text-sm">$${parseFloat(p.subtotal).toFixed(2)}</div>
+                    </div>
+                `).join('');
+
+                const badgeClass = isPendiente ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200';
+                const badgeIcon = isPendiente ? '🔴' : '✅';
+                
+                let footerActions = '';
+                
+                if (isPendiente) {
+                    footerActions = `
+                        <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 rounded-b-2xl">
+                            <button onclick="borrarRegistro(${r.id})" class="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0" title="Eliminar registro">🗑️</button>
+                            <button onclick="abrirModalPago(${r.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm transition-colors shadow-green-500/20">
+                                Registrar Pago
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    const btnFoto = r.pagoFoto ? `<button onclick="verImagen('${r.pagoFoto}')" class="mt-2 text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-md w-fit"><span>📸</span> Ver Comprobante</button>` : '';
+                    footerActions = `
+                        <div class="p-4 bg-green-50/50 border-t border-green-100 rounded-b-2xl flex justify-between items-start">
+                            <div class="text-xs text-slate-600">
+                                <span class="font-bold text-green-700 block mb-1">Pagado vía ${r.pagoMetodo}</span>
+                                <span class="block">Fecha: ${r.pagoFecha}</span>
+                                <span class="block text-slate-500">Ref: ${r.pagoReferencia}</span>
+                                ${btnFoto}
+                            </div>
+                            <button onclick="borrarRegistro(${r.id})" class="text-slate-300 hover:text-red-500 transition-colors p-1" title="Eliminar registro">🗑️</button>
+                        </div>
+                    `;
+                }
+
+                const tarjetaHTML = `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow duration-300">
+                        
+                        <div class="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">${r.fechaCreacion}</span>
+                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-md border ${badgeClass} flex items-center gap-1.5 uppercase tracking-wide">
+                                <span class="text-[8px]">${badgeIcon}</span> ${r.estado}
+                            </span>
+                        </div>
+
+                        <div class="p-5 flex-1">
+                            <h3 class="text-lg font-black text-slate-800 mb-1 truncate" title="${r.cliente}">${r.cliente}</h3>
+                            <div class="text-3xl font-black text-slate-800 mb-4 tracking-tight">$${r.montoTotal}</div>
+                            
+                            <div>
+                                <button onclick="toggleDetalles(${r.id})" class="text-[12px] font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 px-3 py-2 rounded-lg w-full flex justify-between items-center transition-colors border border-blue-100">
+                                    <span>📦 Ver detalle de compra (${r.productos.length} items)</span>
+                                    <span id="icono-detalles-${r.id}" class="text-blue-500">▼</span>
+                                </button>
+                                
+                                <div id="detalles-${r.id}" class="hidden bg-slate-50 rounded-xl p-3 border border-slate-100 mt-2 transition-all">
+                                    <div class="max-h-[140px] overflow-y-auto no-scrollbar pr-1">
+                                        ${desgloseHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${footerActions}
+                    </div>
+                `;
+                
+                contenedor.innerHTML += tarjetaHTML;
+            });
+        }
+
+        renderizarCarrito();
+        renderizarTarjetas();
+    </script>
+</body>
+</html>
