@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punto de Venta y Fiados</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería mejorada para el escaneo -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -207,7 +206,7 @@
 
         document.getElementById('pagoFecha').valueAsDate = new Date();
 
-        // --- LÓGICA DE ESCÁNER DE CÁMARA (NUEVO Y MEJORADO) ---
+        // --- LÓGICA DE ESCÁNER DE CÁMARA ---
         let html5QrcodeScanner = null;
 
         function abrirCamara() {
@@ -223,26 +222,19 @@
                 Html5QrcodeSupportedFormats.CODE_128
             ];
 
-            // Instanciamos el lector con soporte experimental de hardware nativo (BarcodeDetector API)
             html5QrcodeScanner = new Html5Qrcode("reader", { 
                 formatsToSupport: formatosSoportados,
                 experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true // Activa aceleración de hardware para iOS/Android
+                    useBarCodeDetectorIfSupported: true 
                 }
             });
             
-            // Forzamos enfoque continuo y máxima resolución para enfocar barras delgadas
+            // Forzamos estrictamente la cámara trasera y reducimos configuraciones que causaban conflicto
             html5QrcodeScanner.start(
-                { facingMode: "environment" },
+                { facingMode: "environment" }, 
                 {
-                    fps: 15,
-                    qrbox: { width: 280, height: 120 },
-                    aspectRatio: 1.777778, // Proporción ideal para teléfonos de pantalla ancha
-                    videoConstraints: {
-                        width: { min: 640, ideal: 1920, max: 1920 }, // Pide video de alta definición (HD)
-                        height: { min: 480, ideal: 1080, max: 1080 },
-                        focusMode: "continuous" // Fuerza enfoque automático nativo
-                    }
+                    fps: 10,
+                    qrbox: { width: 280, height: 120 }
                 },
                 (decodedText, decodedResult) => {
                     document.getElementById('prodCodigo').value = decodedText;
@@ -281,18 +273,16 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // Creamos un escáner temporal para procesar una foto fija de alta calidad
             const localScanner = new Html5Qrcode("reader");
             localScanner.scanFile(file, true)
                 .then(decodedText => {
                     document.getElementById('prodCodigo').value = decodedText;
                     procesarBusquedaCodigo(decodedText, true);
                     cerrarCamara();
-                    // Limpiar el input file
                     document.getElementById('fotoEscaneoAlternativo').value = '';
                 })
                 .catch(err => {
-                    alert("No se pudo detectar un código de barras claro en la foto. Asegúrese de que esté bien iluminada y nítida.");
+                    alert("No se pudo detectar un código claro en la foto.");
                     document.getElementById('fotoEscaneoAlternativo').value = '';
                 });
         });
