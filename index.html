@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta y Fiados V6 - Cámara</title>
+    <title>Punto de Venta y Fiados</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Librería para leer códigos de barras con la cámara -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -132,13 +132,12 @@
         <div class="bg-white p-4 rounded-2xl w-full max-w-sm shadow-2xl relative">
             <button onclick="cerrarCamara()" class="absolute -top-4 -right-4 bg-red-500 text-white rounded-full w-10 h-10 font-bold border-4 border-slate-100 flex items-center justify-center hover:bg-red-600 transition shadow-lg text-lg z-10">&times;</button>
             <h3 class="font-bold text-center mb-3 text-slate-800">Escaneando Producto...</h3>
-            <!-- Contenedor donde se dibuja el video de la cámara -->
             <div id="reader" width="100%" class="rounded-lg overflow-hidden border-2 border-slate-200 bg-black"></div>
-            <p class="text-xs text-center text-slate-500 mt-3">Apunta la cámara al código de barras o QR</p>
+            <p class="text-xs text-center text-slate-500 mt-3">Apunta la cámara al código de barras</p>
         </div>
     </div>
 
-    <!-- MODAL DE PAGO Y MODAL IMAGEN (Iguales que la versión anterior) -->
+    <!-- MODAL DE PAGO -->
     <div id="modalPago" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center hidden z-40 p-4 pb-0 md:pb-4 transition-opacity">
         <div class="bg-white p-6 rounded-t-3xl md:rounded-2xl w-full max-w-md shadow-2xl animate-slide-up">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 md:hidden"></div>
@@ -175,6 +174,7 @@
         </div>
     </div>
 
+    <!-- Modal para ver imagen -->
     <div id="imageModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white p-2 rounded-2xl max-w-xl w-full relative">
             <button onclick="cerrarImagen()" class="absolute -top-4 -right-4 bg-slate-800 text-white rounded-full w-10 h-10 font-bold border-4 border-slate-100 flex items-center justify-center hover:bg-red-500 transition shadow-lg text-lg">&times;</button>
@@ -198,7 +198,7 @@
 
         document.getElementById('pagoFecha').valueAsDate = new Date();
 
-        // --- LÓGICA DE ESCÁNER DE CÁMARA (NUEVO) ---
+        // --- LÓGICA DE ESCÁNER DE CÁMARA (NUEVO Y MEJORADO) ---
         let html5QrcodeScanner = null;
 
         function abrirCamara() {
@@ -206,26 +206,32 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            html5QrcodeScanner = new Html5Qrcode("reader");
+            const formatosSoportados = [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128
+            ];
+
+            html5QrcodeScanner = new Html5Qrcode("reader", { formatsToSupport: formatosSoportados });
             
-            // Configuración de la cámara: usar la cámara trasera y acotar la zona de lectura
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
                 {
-                    fps: 10,
-                    qrbox: { width: 250, height: 150 }
+                    fps: 15,
+                    qrbox: { width: 280, height: 100 }
                 },
                 (decodedText, decodedResult) => {
-                    // ¡Éxito! Leyó el código
                     document.getElementById('prodCodigo').value = decodedText;
-                    procesarBusquedaCodigo(decodedText, true); // Busca en catálogo y salta a cantidad
+                    procesarBusquedaCodigo(decodedText, true); 
                     cerrarCamara();
                 },
                 (errorMessage) => {
-                    // Errores de lectura ignorables (pasa muy rápido mientras enfoca)
+                    // Errores de enfoque normales
                 }
             ).catch((err) => {
-                alert("Error al abrir la cámara. Asegúrate de dar permisos en tu navegador.");
+                alert("Error al abrir la cámara. Revisa los permisos.");
                 cerrarCamara();
             });
         }
@@ -248,7 +254,6 @@
             }
         }
 
-
         // --- FUNCIONES DE BÚSQUEDA INTELIGENTE ---
         function procesarBusquedaCodigo(codigoEscaneado, saltarSiguiente) {
             if(codigoEscaneado) {
@@ -261,6 +266,8 @@
                         document.getElementById('prodCant').focus();
                         document.getElementById('prodCant').select();
                     }
+                } else {
+                    if (saltarSiguiente) document.getElementById('prodNombre').focus();
                 }
             }
         }
