@@ -3,29 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta y Fiados V7</title>
+    <title>Punto de Venta y Fiados V8</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería Industrial ZXing para escaneo web -->
     <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Efecto de escaneo láser */
         .laser-line {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background-color: rgba(255, 0, 0, 0.7);
-            box-shadow: 0 0 10px red;
+            position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
+            background-color: rgba(255, 0, 0, 0.7); box-shadow: 0 0 10px red;
             animation: scan 2s infinite linear;
         }
-        @keyframes scan {
-            0% { top: 10%; }
-            50% { top: 90%; }
-            100% { top: 10%; }
-        }
+        @keyframes scan { 0% { top: 10%; } 50% { top: 90%; } 100% { top: 10%; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
@@ -60,14 +49,22 @@
                         </div>
 
                         <!-- Lector y Producto -->
-                        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 relative overflow-hidden">
+                        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 relative overflow-visible">
                             <h3 class="text-sm font-bold text-blue-900 mb-3">Agregar Artículo</h3>
                             
                             <div class="space-y-3">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Código de Barra</label>
+                                <div class="relative">
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Buscar Producto o Escanear</label>
                                     <div class="flex gap-2">
-                                        <input type="text" id="prodCodigo" class="flex-1 rounded-lg border-2 border-blue-200 p-2.5 text-sm bg-yellow-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner" placeholder="Escribe o usa la cámara...">
+                                        <div class="flex-1 relative">
+                                            <!-- Campo de búsqueda inteligente -->
+                                            <input type="text" id="prodCodigo" autocomplete="off" class="w-full rounded-lg border-2 border-blue-200 p-2.5 text-sm bg-yellow-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all shadow-inner" placeholder="Escribe el código o nombre...">
+                                            
+                                            <!-- Caja flotante de Sugerencias -->
+                                            <div id="sugerenciasCodigo" class="absolute z-[60] w-full bg-white border border-slate-200 shadow-xl rounded-lg mt-1 hidden max-h-48 overflow-y-auto no-scrollbar">
+                                                <!-- Las sugerencias aparecen aquí -->
+                                            </div>
+                                        </div>
                                         <button type="button" onclick="abrirCamara()" class="bg-blue-600 text-white px-4 rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center" title="Escanear con la cámara">
                                             📷
                                         </button>
@@ -75,7 +72,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Producto *</label>
+                                    <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Nombre (Si es nuevo) *</label>
                                     <input type="text" id="prodNombre" class="w-full rounded-lg border-slate-200 border p-2.5 text-sm bg-white" placeholder="Ej: Arroz 1kg">
                                 </div>
 
@@ -143,22 +140,16 @@
         </div>
     </div>
 
-    <!-- MODAL DE LA CÁMARA (Lector ZXing) -->
+    <!-- MODAL DE LA CÁMARA -->
     <div id="modalCamara" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
         <div class="bg-white p-4 rounded-2xl w-full max-w-sm shadow-2xl relative">
             <button onclick="cerrarCamara()" class="absolute -top-4 -right-4 bg-red-500 text-white rounded-full w-10 h-10 font-bold border-4 border-slate-100 flex items-center justify-center hover:bg-red-600 transition shadow-lg text-lg z-20">&times;</button>
-            
             <h3 class="font-black text-center text-slate-800 mb-1">Motor ZXing Industrial</h3>
             <p class="text-[10px] text-center text-blue-600 font-bold mb-4">Aleja un poco la botella para enfocar mejor</p>
-            
-            <!-- Contenedor del video con el láser -->
             <div class="relative rounded-xl overflow-hidden border-2 border-slate-200 bg-black shadow-inner my-2 h-[250px] flex items-center justify-center bg-gray-900">
                 <video id="videoElement" class="w-full h-full object-cover" autoplay muted playsinline></video>
-                <!-- Línea láser animada -->
                 <div class="laser-line"></div>
             </div>
-
-            <!-- Alternativa de foto (sigue siendo el plan B más seguro) -->
             <div class="mt-4 pt-3 border-t border-slate-100 text-center">
                 <label class="block text-[11px] font-bold text-slate-500 mb-2">¿Sigue borroso? Sube una foto clara:</label>
                 <input type="file" id="fotoEscaneoAlternativo" accept="image/*" capture="environment" class="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 w-full">
@@ -166,7 +157,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE PAGO (Igual que versiones anteriores) -->
+    <!-- MODAL DE PAGO -->
     <div id="modalPago" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center hidden z-40 p-4 pb-0 md:pb-4 transition-opacity">
         <div class="bg-white p-6 rounded-t-3xl md:rounded-2xl w-full max-w-md shadow-2xl">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 md:hidden"></div>
@@ -239,7 +230,6 @@
                         return;
                     }
 
-                    // Buscar cámara trasera o ambiente
                     selectedDeviceId = videoInputDevices[0].deviceId;
                     const backCamera = videoInputDevices.find(device => 
                         device.label.toLowerCase().includes('back') || 
@@ -253,15 +243,23 @@
                         selectedDeviceId = videoInputDevices[videoInputDevices.length - 1].deviceId;
                     }
 
-                    // Iniciar el lector
                     codeReader.decodeFromVideoDevice(selectedDeviceId, 'videoElement', (result, err) => {
                         if (result) {
-                            // ¡Lo detectó!
                             document.getElementById('prodCodigo').value = result.text;
-                            procesarBusquedaCodigo(result.text, true);
+                            
+                            // Buscar match exacto e inyectar
+                            const productoConocido = catalogoProductos.find(p => p.codigo === result.text);
+                            if(productoConocido) {
+                                document.getElementById('prodNombre').value = productoConocido.nombre;
+                                document.getElementById('prodPrecio').value = productoConocido.precio;
+                                document.getElementById('prodCant').focus();
+                                document.getElementById('prodCant').select();
+                            } else {
+                                document.getElementById('prodNombre').focus();
+                            }
+
                             cerrarCamara();
                             
-                            // Reproducir un pitido (opcional, ayuda a saber que leyó)
                             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                             const oscillator = audioCtx.createOscillator();
                             oscillator.connect(audioCtx.destination);
@@ -269,26 +267,21 @@
                             oscillator.start();
                             setTimeout(() => oscillator.stop(), 100);
                         }
-                        if (err && !(err instanceof ZXing.NotFoundException)) {
-                            console.error(err);
-                        }
                     });
                 })
                 .catch((err) => {
                     alert("Acepta los permisos de cámara en tu navegador.");
-                    console.error(err);
                     cerrarCamara();
                 });
         }
 
         function cerrarCamara() {
-            codeReader.reset(); // Apaga la cámara
+            codeReader.reset();
             const modal = document.getElementById('modalCamara');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
 
-        // --- ALTERNATIVA: ESCANEO POR FOTO (con ZXing) ---
         document.getElementById('fotoEscaneoAlternativo').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -300,44 +293,101 @@
                 codeReader.decodeFromImageElement(img)
                     .then(result => {
                         document.getElementById('prodCodigo').value = result.text;
-                        procesarBusquedaCodigo(result.text, true);
+                        const productoConocido = catalogoProductos.find(p => p.codigo === result.text);
+                        if(productoConocido) {
+                            document.getElementById('prodNombre').value = productoConocido.nombre;
+                            document.getElementById('prodPrecio').value = productoConocido.precio;
+                            document.getElementById('prodCant').focus();
+                            document.getElementById('prodCant').select();
+                        } else {
+                            document.getElementById('prodNombre').focus();
+                        }
                         cerrarCamara();
                         document.getElementById('fotoEscaneoAlternativo').value = '';
                     })
                     .catch(err => {
-                        alert("El código no se ve claro en la foto. Intenta con más luz o escribiendo el código a mano.");
+                        alert("El código no se ve claro en la foto. Intenta con más luz.");
                         document.getElementById('fotoEscaneoAlternativo').value = '';
                     });
             };
         });
 
-        // --- FUNCIONES DE BÚSQUEDA INTELIGENTE ---
-        function procesarBusquedaCodigo(codigoEscaneado, saltarSiguiente) {
-            if(codigoEscaneado) {
-                const productoConocido = catalogoProductos.find(p => p.codigo === codigoEscaneado);
-                if(productoConocido) {
-                    document.getElementById('prodNombre').value = productoConocido.nombre;
-                    document.getElementById('prodPrecio').value = productoConocido.precio;
+        // --- BÚSQUEDA INTELIGENTE / AUTOCOMPLETAR (NUEVO) ---
+        const inputCodigo = document.getElementById('prodCodigo');
+        const cajaSugerencias = document.getElementById('sugerenciasCodigo');
+
+        inputCodigo.addEventListener('input', function(e) {
+            const valor = this.value.trim().toLowerCase();
+            cajaSugerencias.innerHTML = '';
+
+            // Ocultar si hay menos de 2 caracteres
+            if (valor.length < 2) {
+                cajaSugerencias.classList.add('hidden');
+                return;
+            }
+
+            // Filtrar catálogo por Código o por Nombre
+            const coincidencias = catalogoProductos.filter(p => 
+                (p.codigo && p.codigo.toLowerCase().includes(valor)) || 
+                (p.nombre && p.nombre.toLowerCase().includes(valor))
+            );
+
+            if (coincidencias.length > 0) {
+                cajaSugerencias.classList.remove('hidden');
+                
+                coincidencias.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-800 text-sm">${p.nombre}</span>
+                            <span class="text-green-600 font-bold text-sm">$${parseFloat(p.precio).toFixed(2)}</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 font-mono mt-1 flex items-center gap-1">
+                            <span>🏷️</span> ${p.codigo || 'S/N'}
+                        </div>
+                    `;
                     
-                    if (saltarSiguiente) {
+                    // Acción al tocar una sugerencia
+                    div.onclick = () => {
+                        document.getElementById('prodCodigo').value = p.codigo || '';
+                        document.getElementById('prodNombre').value = p.nombre;
+                        document.getElementById('prodPrecio').value = p.precio;
+                        cajaSugerencias.classList.add('hidden');
+                        
+                        // Salta directo a la cantidad
                         document.getElementById('prodCant').focus();
                         document.getElementById('prodCant').select();
-                    }
-                } else {
-                    if (saltarSiguiente) document.getElementById('prodNombre').focus();
-                }
-            }
-        }
-
-        document.getElementById('prodCodigo').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                procesarBusquedaCodigo(this.value.trim(), true);
+                    };
+                    
+                    cajaSugerencias.appendChild(div);
+                });
+            } else {
+                cajaSugerencias.classList.add('hidden');
             }
         });
 
-        document.getElementById('prodCodigo').addEventListener('input', function(e) {
-            procesarBusquedaCodigo(this.value.trim(), false);
+        // Ocultar sugerencias si se hace clic fuera del cuadro
+        document.addEventListener('click', function(e) {
+            if (e.target !== inputCodigo && !cajaSugerencias.contains(e.target)) {
+                cajaSugerencias.classList.add('hidden');
+            }
+        });
+
+        // Evento especial si conectan un lector físico de pistola (Enter)
+        inputCodigo.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                cajaSugerencias.classList.add('hidden');
+                const valor = this.value.trim();
+                const productoConocido = catalogoProductos.find(p => p.codigo === valor);
+                if(productoConocido) {
+                    document.getElementById('prodNombre').value = productoConocido.nombre;
+                    document.getElementById('prodPrecio').value = productoConocido.precio;
+                    document.getElementById('prodCant').focus();
+                    document.getElementById('prodCant').select();
+                }
+            }
         });
 
         // --- LÓGICA DEL CARRITO ---
@@ -352,11 +402,19 @@
                 return;
             }
 
-            if (codigo) {
-                const indexProducto = catalogoProductos.findIndex(p => p.codigo === codigo);
+            if (codigo || nombre) {
+                // Actualizar o crear en catálogo basándonos en código (o nombre si no hay código)
+                let indexProducto = -1;
+                if (codigo) {
+                    indexProducto = catalogoProductos.findIndex(p => p.codigo === codigo);
+                } else {
+                    indexProducto = catalogoProductos.findIndex(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+                }
+
                 if (indexProducto >= 0) {
                     catalogoProductos[indexProducto].nombre = nombre;
                     catalogoProductos[indexProducto].precio = precio;
+                    if(codigo) catalogoProductos[indexProducto].codigo = codigo;
                 } else {
                     catalogoProductos.push({ codigo: codigo, nombre: nombre, precio: precio });
                 }
@@ -371,6 +429,7 @@
             document.getElementById('prodCant').value = '1';
             document.getElementById('prodPrecio').value = '';
             document.getElementById('prodCodigo').focus(); 
+            cajaSugerencias.classList.add('hidden');
 
             renderizarCarrito();
         }
